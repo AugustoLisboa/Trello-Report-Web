@@ -17,10 +17,3 @@ This GitHub Pages site allows you to generate a CSV report from your Trello work
 ## Privacy Note
 
 This tool runs entirely in your browser. Your Trello API credentials and data are never sent to any server - all processing happens locally.
-
-## Development
-
-To run locally:
-1. Clone this repository
-2. Open `index.html` in your browser
-

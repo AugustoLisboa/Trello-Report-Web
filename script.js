@@ -1,5 +1,6 @@
 // Global variables to store data between steps
-let workspaces = [];
+let workspaceId = '';
+let workspaceName = '';
 let boardsData = [];
 
 // Show loading spinner
@@ -14,7 +15,7 @@ function hideLoading() {
 
 // Show a specific step and hide others
 function showStep(stepNumber) {
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= 4; i++) {
         const element = document.getElementById(`step${i}`);
         if (i === stepNumber) {
             element.style.display = 'block';
@@ -29,8 +30,8 @@ function backToStep(stepNumber) {
     showStep(stepNumber);
 }
 
-// Fetch workspaces for the authenticated user
-async function fetchWorkspaces() {
+// Validate API credentials by making a simple request
+async function validateCredentials() {
     const apiKey = document.getElementById('apiKey').value.trim();
     const apiToken = document.getElementById('apiToken').value.trim();
     
@@ -42,51 +43,68 @@ async function fetchWorkspaces() {
     showLoading();
     
     try {
-        // First get the member's own data to find workspaces
-        const memberResponse = await fetch(`https://api.trello.com/1/members/me?key=${apiKey}&token=${apiToken}`);
-        const memberData = await memberResponse.json();
-        
-        // Then get the organizations (workspaces) the member belongs to
-        const orgsResponse = await fetch(`https://api.trello.com/1/members/me/organizations?key=${apiKey}&token=${apiToken}`);
-        workspaces = await orgsResponse.json();
-        
-        const workspaceSelect = document.getElementById('workspaceSelect');
-        workspaceSelect.innerHTML = '';
-        
-        if (workspaces.length === 0) {
-            workspaceSelect.innerHTML = '<option value="">No workspaces found</option>';
-        } else {
-            workspaces.forEach(workspace => {
-                const option = document.createElement('option');
-                option.value = workspace.id;
-                option.textContent = workspace.displayName;
-                workspaceSelect.appendChild(option);
-            });
+        // Make a simple request to validate credentials
+        const response = await fetch(`https://api.trello.com/1/members/me?key=${apiKey}&token=${apiToken}`);
+        if (!response.ok) {
+            throw new Error('Invalid credentials');
         }
         
         hideLoading();
         showStep(2);
     } catch (error) {
         hideLoading();
-        console.error('Error fetching workspaces:', error);
-        alert('Error fetching workspaces. Please check your API key and token and try again.');
+        console.error('Error validating credentials:', error);
+        alert('Error validating credentials. Please check your API key and token and try again.');
     }
+}
+
+// Extract workspace ID from URL
+function extractWorkspaceId() {
+    const workspaceUrl = document.getElementById('workspaceUrl').value.trim();
+    
+    if (!workspaceUrl) {
+        alert('Please enter a workspace URL');
+        return;
+    }
+    
+    // Try to extract workspace ID from URL
+    const urlPattern = /https?:\/\/trello\.com\/w\/([^\/]+)/i;
+    const match = workspaceUrl.match(urlPattern);
+    
+    if (!match || !match[1]) {
+        alert('Invalid Trello workspace URL. Please enter a URL like: https://trello.com/w/yourworkspace');
+        return;
+    }
+    
+    workspaceId = match[1];
+    workspaceName = match[1].replace(/-/g, ' ');
+    document.getElementById('workspaceName').textContent = workspaceName;
+    showStep(3);
 }
 
 // Generate the report for the selected workspace
 async function generateReport() {
     const apiKey = document.getElementById('apiKey').value.trim();
     const apiToken = document.getElementById('apiToken').value.trim();
-    const workspaceId = document.getElementById('workspaceSelect').value;
     
     if (!workspaceId) {
-        alert('Please select a workspace');
+        alert('Workspace ID not found');
         return;
     }
     
     showLoading();
     
     try {
+        // First get the workspace details to verify it exists
+        const workspaceResponse = await fetch(`https://api.trello.com/1/organizations/${workspaceId}?key=${apiKey}&token=${apiToken}`);
+        if (!workspaceResponse.ok) {
+            throw new Error('Workspace not found or inaccessible');
+        }
+        
+        const workspaceData = await workspaceResponse.json();
+        workspaceName = workspaceData.displayName;
+        document.getElementById('workspaceName').textContent = workspaceName;
+        
         // Get all boards in the workspace
         const boardsResponse = await fetch(`https://api.trello.com/1/organizations/${workspaceId}/boards?key=${apiKey}&token=${apiToken}`);
         const boards = await boardsResponse.json();
@@ -126,7 +144,7 @@ async function generateReport() {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.setAttribute('href', url);
-            link.setAttribute('download', `trello_workspace_report_${workspaceId}.csv`);
+            link.setAttribute('download', `trello_workspace_report_${workspaceName.replace(/\s+/g, '_')}.csv`);
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
@@ -136,16 +154,16 @@ async function generateReport() {
         // Show report status
         document.getElementById('reportStatus').innerHTML = `
             <strong>Report Summary:</strong><br>
-            - Workspace: ${document.getElementById('workspaceSelect').selectedOptions[0].text}<br>
+            - Workspace: ${workspaceName}<br>
             - Boards Processed: ${boards.length}<br>
             - Total Members: ${boardsData.length}
         `;
         
         hideLoading();
-        showStep(3);
+        showStep(4);
     } catch (error) {
         hideLoading();
         console.error('Error generating report:', error);
-        alert('Error generating report. Please try again.');
+        alert(`Error generating report: ${error.message}. Please try again.`);
     }
 }

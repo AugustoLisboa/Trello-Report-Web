@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trello Workspace Report Generator</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="script.js"></script>
 </head>
 <body>
@@ -33,30 +32,36 @@
                 <input type="text" id="apiToken" placeholder="Enter your Trello API Token">
             </div>
             
-            <button onclick="fetchWorkspaces()">Next: Select Workspace</button>
+            <button onclick="validateCredentials()">Next: Enter Workspace</button>
         </div>
         
         <div class="step" id="step2" style="display: none;">
-            <h2>Step 2: Select Workspace</h2>
-            <p>Select the workspace you want to generate a report for:</p>
+            <h2>Step 2: Enter Workspace URL</h2>
+            <p>Enter the URL of the workspace you want to generate a report for:</p>
             
             <div class="input-group">
-                <label for="workspaceSelect">Workspace:</label>
-                <select id="workspaceSelect">
-                    <option value="">Loading workspaces...</option>
-                </select>
+                <label for="workspaceUrl">Workspace URL:</label>
+                <input type="text" id="workspaceUrl" placeholder="https://trello.com/w/yourworkspace">
+                <p class="hint">Example: https://trello.com/w/yourworkspace</p>
             </div>
             
-            <button onclick="generateReport()">Generate Report</button>
+            <button onclick="extractWorkspaceId()">Next: Generate Report</button>
             <button class="secondary" onclick="backToStep(1)">Back</button>
         </div>
         
         <div class="step" id="step3" style="display: none;">
-            <h2>Step 3: Download Report</h2>
+            <h2>Step 3: Generate Report</h2>
+            <p>Ready to generate report for workspace: <strong id="workspaceName"></strong></p>
+            <button onclick="generateReport()">Generate Report</button>
+            <button class="secondary" onclick="backToStep(2)">Back</button>
+        </div>
+        
+        <div class="step" id="step4" style="display: none;">
+            <h2>Step 4: Download Report</h2>
             <p>Your report is ready! Click the button below to download the CSV file.</p>
             <button id="downloadBtn">Download CSV Report</button>
             <div id="reportStatus"></div>
-            <button class="secondary" onclick="backToStep(2)">Back</button>
+            <button class="secondary" onclick="backToStep(3)">Back</button>
         </div>
         
         <div class="loading" id="loading" style="display: none;">

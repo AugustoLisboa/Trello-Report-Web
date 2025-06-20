@@ -105,4 +105,13 @@ a:hover {
 #reportStatus {
     margin-top: 20px;
     padding: 10px;
-    background-color: #f0f7
+    background-color: #f0f7fc;
+    border-radius: 4px;
+}
+
+.hint {
+    font-size: 0.9em;
+    color: #666;
+    margin-top: 5px;
+    font-style: italic;
+}

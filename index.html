@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trello Workspace Report Generator</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="script.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Trello Workspace Report Generator</h1>
+        <p>Generate a CSV report with all boards in your Trello workspace, including users and their roles.</p>
+        
+        <div class="step" id="step1">
+            <h2>Step 1: Get Your Trello API Key</h2>
+            <p>You need to get your Trello API key and token to access your workspace data.</p>
+            <ol>
+                <li>Go to <a href="https://trello.com/app-key" target="_blank">Trello App Key</a></li>
+                <li>Copy your API Key and paste it below</li>
+                <li>Scroll down to generate a token (with read access)</li>
+                <li>Copy the token and paste it below</li>
+            </ol>
+            
+            <div class="input-group">
+                <label for="apiKey">API Key:</label>
+                <input type="text" id="apiKey" placeholder="Enter your Trello API Key">
+            </div>
+            
+            <div class="input-group">
+                <label for="apiToken">API Token:</label>
+                <input type="text" id="apiToken" placeholder="Enter your Trello API Token">
+            </div>
+            
+            <button onclick="fetchWorkspaces()">Next: Select Workspace</button>
+        </div>
+        
+        <div class="step" id="step2" style="display: none;">
+            <h2>Step 2: Select Workspace</h2>
+            <p>Select the workspace you want to generate a report for:</p>
+            
+            <div class="input-group">
+                <label for="workspaceSelect">Workspace:</label>
+                <select id="workspaceSelect">
+                    <option value="">Loading workspaces...</option>
+                </select>
+            </div>
+            
+            <button onclick="generateReport()">Generate Report</button>
+            <button class="secondary" onclick="backToStep(1)">Back</button>
+        </div>
+        
+        <div class="step" id="step3" style="display: none;">
+            <h2>Step 3: Download Report</h2>
+            <p>Your report is ready! Click the button below to download the CSV file.</p>
+            <button id="downloadBtn">Download CSV Report</button>
+            <div id="reportStatus"></div>
+            <button class="secondary" onclick="backToStep(2)">Back</button>
+        </div>
+        
+        <div class="loading" id="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Loading data from Trello...</p>
+        </div>
+    </div>
+</body>
+</html>

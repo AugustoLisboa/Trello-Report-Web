@@ -121,6 +121,7 @@ async function generateReport() {
             const membersWithRoles = members.map(member => ({
                 boardId: board.id,
                 boardName: board.name,
+                boardUrl: `https://trello.com/b/${board.shortLink}`, // Add board URL
                 memberId: member.id,
                 memberName: member.fullName,
                 memberUsername: member.username,
@@ -131,10 +132,10 @@ async function generateReport() {
         }
         
         // Prepare CSV content
-        let csvContent = "Board ID,Board Name,Member ID,Member Name,Member Username,Role\n";
+        let csvContent = "Board ID,Board Name,Board URL,Member ID,Member Name,Member Username,Role\n";
         
         boardsData.forEach(row => {
-            csvContent += `"${row.boardId}","${row.boardName}","${row.memberId}","${row.memberName}","${row.memberUsername}","${row.role}"\n`;
+            csvContent += `"${row.boardId}","${row.boardName}","${row.boardUrl}","${row.memberId}","${row.memberName}","${row.memberUsername}","${row.role}"\n`;
         });
         
         // Create download button

@@ -114,28 +114,40 @@ async function generateReport() {
         
         // Process each board to get members and their roles
         for (const board of boards) {
-            const membersResponse = await fetch(`https://api.trello.com/1/boards/${board.id}/members?key=${apiKey}&token=${apiToken}`);
+            // Get detailed board information including creator and date
+            const boardDetailResponse = await fetch(`https://api.trello.com/1/boards/${board.id}?fields=id,name,shortLink,idMemberCreator,dateLastActivity&key=${apiKey}&token=${apiToken}`);
+            const boardDetails = await boardDetailResponse.json();
+            
+            // Get creator details
+            const creatorResponse = await fetch(`https://api.trello.com/1/members/${boardDetails.idMemberCreator}?fields=fullName,username&key=${apiKey}&token=${apiToken}`);
+            const creatorDetails = await creatorResponse.json();
+            
+            // Get board members with their roles
+            const membersResponse = await fetch(`https://api.trello.com/1/boards/${board.id}/members?fields=fullName,username,memberType&key=${apiKey}&token=${apiToken}`);
             const members = await membersResponse.json();
             
             // Format members data
             const membersWithRoles = members.map(member => ({
                 boardId: board.id,
                 boardName: board.name,
-                boardUrl: `https://trello.com/b/${board.shortLink}`, // Add board URL
+                boardUrl: `https://trello.com/b/${board.shortLink}`,
+                boardCreatorId: creatorDetails.id,
+                boardCreatorName: creatorDetails.fullName,
+                boardLastUpdated: boardDetails.dateLastActivity,
                 memberId: member.id,
                 memberName: member.fullName,
                 memberUsername: member.username,
-                role: member.memberType
+                role: member.memberType || 'normal' // Default to 'normal' if undefined
             }));
             
             boardsData = boardsData.concat(membersWithRoles);
         }
         
         // Prepare CSV content
-        let csvContent = "Board ID,Board Name,Board URL,Member ID,Member Name,Member Username,Role\n";
+        let csvContent = "Board ID,Board Name,Board URL,Board Creator ID,Board Creator Name,Board Last Updated,Member ID,Member Name,Member Username,Role\n";
         
         boardsData.forEach(row => {
-            csvContent += `"${row.boardId}","${row.boardName}","${row.boardUrl}","${row.memberId}","${row.memberName}","${row.memberUsername}","${row.role}"\n`;
+            csvContent += `"${row.boardId}","${row.boardName}","${row.boardUrl}","${row.boardCreatorId}","${row.boardCreatorName}","${row.boardLastUpdated}","${row.memberId}","${row.memberName}","${row.memberUsername}","${row.role}"\n`;
         });
         
         // Create download button

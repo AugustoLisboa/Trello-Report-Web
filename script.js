@@ -1,3 +1,88 @@
+// Global variables to store data between steps
+let workspaceId = '';
+let workspaceName = '';
+let boardsData = [];
+
+// Show loading spinner
+function showLoading() {
+    document.getElementById('loading').style.display = 'block';
+}
+
+// Hide loading spinner
+function hideLoading() {
+    document.getElementById('loading').style.display = 'none';
+}
+
+// Show a specific step and hide others
+function showStep(stepNumber) {
+    for (let i = 1; i <= 4; i++) {
+        const element = document.getElementById(`step${i}`);
+        if (i === stepNumber) {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+}
+
+// Go back to a previous step
+function backToStep(stepNumber) {
+    showStep(stepNumber);
+}
+
+// Validate API credentials by making a simple request
+async function validateCredentials() {
+    const apiKey = document.getElementById('apiKey').value.trim();
+    const apiToken = document.getElementById('apiToken').value.trim();
+    
+    if (!apiKey || !apiToken) {
+        alert('Please enter both API Key and Token');
+        return;
+    }
+    
+    showLoading();
+    
+    try {
+        // Make a simple request to validate credentials
+        const response = await fetch(`https://api.trello.com/1/members/me?key=${apiKey}&token=${apiToken}`);
+        if (!response.ok) {
+            throw new Error('Invalid credentials');
+        }
+        
+        hideLoading();
+        showStep(2);
+    } catch (error) {
+        hideLoading();
+        console.error('Error validating credentials:', error);
+        alert('Error validating credentials. Please check your API key and token and try again.');
+    }
+}
+
+// Extract workspace ID from URL
+function extractWorkspaceId() {
+    const workspaceUrl = document.getElementById('workspaceUrl').value.trim();
+    
+    if (!workspaceUrl) {
+        alert('Please enter a workspace URL');
+        return;
+    }
+    
+    // Try to extract workspace ID from URL
+    const urlPattern = /https?:\/\/trello\.com\/w\/([^\/]+)/i;
+    const match = workspaceUrl.match(urlPattern);
+    
+    if (!match || !match[1]) {
+        alert('Invalid Trello workspace URL. Please enter a URL like: https://trello.com/w/yourworkspace');
+        return;
+    }
+    
+    workspaceId = match[1];
+    workspaceName = match[1].replace(/-/g, ' ');
+    document.getElementById('workspaceName').textContent = workspaceName;
+    showStep(3);
+}
+
+// Generate the report for the selected workspace
 async function generateReport() {
     const apiKey = document.getElementById('apiKey').value.trim();
     const apiToken = document.getElementById('apiToken').value.trim();

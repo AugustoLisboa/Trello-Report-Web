@@ -114,43 +114,42 @@ async function generateReport() {
         
         // Process each board to get members and their roles
         for (const board of boards) {
-            // Get detailed board information including all members with their roles
-            const boardDetailResponse = await fetch(`https://api.trello.com/1/boards/${board.id}?fields=id,name,shortLink,idMemberCreator,dateLastActivity&members=all&member_fields=fullName,username,memberType&key=${apiKey}&token=${apiToken}`);
+            // Get board basic details
+            const boardDetailResponse = await fetch(`https://api.trello.com/1/boards/${board.id}?fields=name,shortLink,dateLastActivity&key=${apiKey}&token=${apiToken}`);
             const boardDetails = await boardDetailResponse.json();
             
-            // Get creator details
-            let creatorName = "Unknown";
-            let creatorUsername = "unknown";
-            if (boardDetails.idMemberCreator) {
-                const creatorResponse = await fetch(`https://api.trello.com/1/members/${boardDetails.idMemberCreator}?fields=fullName,username&key=${apiKey}&token=${apiToken}`);
-                const creatorDetails = await creatorResponse.json();
-                creatorName = creatorDetails.fullName;
-                creatorUsername = creatorDetails.username;
+            // Get board memberships with proper roles
+            const membershipsResponse = await fetch(`https://api.trello.com/1/boards/${board.id}/memberships?key=${apiKey}&token=${apiToken}`);
+            const memberships = await membershipsResponse.json();
+            
+            // Get member details for each membership
+            for (const membership of memberships) {
+                // Skip deactivated or unconfirmed members if needed
+                if (membership.deactivated || membership.unconfirmed) continue;
+                
+                // Get member details
+                const memberResponse = await fetch(`https://api.trello.com/1/members/${membership.idMember}?fields=fullName,username&key=${apiKey}&token=${apiToken}`);
+                const memberDetails = await memberResponse.json();
+                
+                // Add to boardsData
+                boardsData.push({
+                    boardId: board.id,
+                    boardName: boardDetails.name,
+                    boardUrl: `https://trello.com/b/${boardDetails.shortLink}`,
+                    boardLastUpdated: boardDetails.dateLastActivity,
+                    memberId: membership.idMember,
+                    memberName: memberDetails.fullName,
+                    memberUsername: memberDetails.username,
+                    role: membership.memberType
+                });
             }
-            
-            // Process all members of the board
-            const membersWithRoles = boardDetails.members.map(member => ({
-                boardId: board.id,
-                boardName: board.name,
-                boardUrl: `https://trello.com/b/${board.shortLink}`,
-                boardCreatorId: boardDetails.idMemberCreator,
-                boardCreatorName: creatorName,
-                boardCreatorUsername: creatorUsername,
-                boardLastUpdated: boardDetails.dateLastActivity,
-                memberId: member.id,
-                memberName: member.fullName,
-                memberUsername: member.username,
-                role: member.memberType || 'normal' // Default to 'normal' if undefined
-            }));
-            
-            boardsData = boardsData.concat(membersWithRoles);
         }
         
         // Prepare CSV content
-        let csvContent = "Board ID,Board Name,Board URL,Board Creator ID,Board Creator Name,Board Creator Username,Board Last Updated,Member ID,Member Name,Member Username,Role\n";
+        let csvContent = "Board ID,Board Name,Board URL,Board Last Updated,Member ID,Member Name,Member Username,Role\n";
         
         boardsData.forEach(row => {
-            csvContent += `"${row.boardId}","${row.boardName}","${row.boardUrl}","${row.boardCreatorId}","${row.boardCreatorName}","${row.boardCreatorUsername}","${row.boardLastUpdated}","${row.memberId}","${row.memberName}","${row.memberUsername}","${row.role}"\n`;
+            csvContent += `"${row.boardId}","${row.boardName}","${row.boardUrl}","${row.boardLastUpdated}","${row.memberId}","${row.memberName}","${row.memberUsername}","${row.role}"\n`;
         });
         
         // Create download button

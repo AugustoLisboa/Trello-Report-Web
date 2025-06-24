@@ -1,88 +1,3 @@
-// Global variables to store data between steps
-let workspaceId = '';
-let workspaceName = '';
-let boardsData = [];
-
-// Show loading spinner
-function showLoading() {
-    document.getElementById('loading').style.display = 'block';
-}
-
-// Hide loading spinner
-function hideLoading() {
-    document.getElementById('loading').style.display = 'none';
-}
-
-// Show a specific step and hide others
-function showStep(stepNumber) {
-    for (let i = 1; i <= 4; i++) {
-        const element = document.getElementById(`step${i}`);
-        if (i === stepNumber) {
-            element.style.display = 'block';
-        } else {
-            element.style.display = 'none';
-        }
-    }
-}
-
-// Go back to a previous step
-function backToStep(stepNumber) {
-    showStep(stepNumber);
-}
-
-// Validate API credentials by making a simple request
-async function validateCredentials() {
-    const apiKey = document.getElementById('apiKey').value.trim();
-    const apiToken = document.getElementById('apiToken').value.trim();
-    
-    if (!apiKey || !apiToken) {
-        alert('Please enter both API Key and Token');
-        return;
-    }
-    
-    showLoading();
-    
-    try {
-        // Make a simple request to validate credentials
-        const response = await fetch(`https://api.trello.com/1/members/me?key=${apiKey}&token=${apiToken}`);
-        if (!response.ok) {
-            throw new Error('Invalid credentials');
-        }
-        
-        hideLoading();
-        showStep(2);
-    } catch (error) {
-        hideLoading();
-        console.error('Error validating credentials:', error);
-        alert('Error validating credentials. Please check your API key and token and try again.');
-    }
-}
-
-// Extract workspace ID from URL
-function extractWorkspaceId() {
-    const workspaceUrl = document.getElementById('workspaceUrl').value.trim();
-    
-    if (!workspaceUrl) {
-        alert('Please enter a workspace URL');
-        return;
-    }
-    
-    // Try to extract workspace ID from URL
-    const urlPattern = /https?:\/\/trello\.com\/w\/([^\/]+)/i;
-    const match = workspaceUrl.match(urlPattern);
-    
-    if (!match || !match[1]) {
-        alert('Invalid Trello workspace URL. Please enter a URL like: https://trello.com/w/yourworkspace');
-        return;
-    }
-    
-    workspaceId = match[1];
-    workspaceName = match[1].replace(/-/g, ' ');
-    document.getElementById('workspaceName').textContent = workspaceName;
-    showStep(3);
-}
-
-// Generate the report for the selected workspace
 async function generateReport() {
     const apiKey = document.getElementById('apiKey').value.trim();
     const apiToken = document.getElementById('apiToken').value.trim();
@@ -114,25 +29,28 @@ async function generateReport() {
         
         // Process each board to get members and their roles
         for (const board of boards) {
-            // Get detailed board information including creator and date
-            const boardDetailResponse = await fetch(`https://api.trello.com/1/boards/${board.id}?fields=id,name,shortLink,idMemberCreator,dateLastActivity&key=${apiKey}&token=${apiToken}`);
+            // Get detailed board information including all members with their roles
+            const boardDetailResponse = await fetch(`https://api.trello.com/1/boards/${board.id}?fields=id,name,shortLink,idMemberCreator,dateLastActivity&members=all&member_fields=fullName,username,memberType&key=${apiKey}&token=${apiToken}`);
             const boardDetails = await boardDetailResponse.json();
             
             // Get creator details
-            const creatorResponse = await fetch(`https://api.trello.com/1/members/${boardDetails.idMemberCreator}?fields=fullName,username&key=${apiKey}&token=${apiToken}`);
-            const creatorDetails = await creatorResponse.json();
+            let creatorName = "Unknown";
+            let creatorUsername = "unknown";
+            if (boardDetails.idMemberCreator) {
+                const creatorResponse = await fetch(`https://api.trello.com/1/members/${boardDetails.idMemberCreator}?fields=fullName,username&key=${apiKey}&token=${apiToken}`);
+                const creatorDetails = await creatorResponse.json();
+                creatorName = creatorDetails.fullName;
+                creatorUsername = creatorDetails.username;
+            }
             
-            // Get board members with their roles
-            const membersResponse = await fetch(`https://api.trello.com/1/boards/${board.id}/members?fields=fullName,username,memberType&key=${apiKey}&token=${apiToken}`);
-            const members = await membersResponse.json();
-            
-            // Format members data
-            const membersWithRoles = members.map(member => ({
+            // Process all members of the board
+            const membersWithRoles = boardDetails.members.map(member => ({
                 boardId: board.id,
                 boardName: board.name,
                 boardUrl: `https://trello.com/b/${board.shortLink}`,
-                boardCreatorId: creatorDetails.id,
-                boardCreatorName: creatorDetails.fullName,
+                boardCreatorId: boardDetails.idMemberCreator,
+                boardCreatorName: creatorName,
+                boardCreatorUsername: creatorUsername,
                 boardLastUpdated: boardDetails.dateLastActivity,
                 memberId: member.id,
                 memberName: member.fullName,
@@ -144,10 +62,10 @@ async function generateReport() {
         }
         
         // Prepare CSV content
-        let csvContent = "Board ID,Board Name,Board URL,Board Creator ID,Board Creator Name,Board Last Updated,Member ID,Member Name,Member Username,Role\n";
+        let csvContent = "Board ID,Board Name,Board URL,Board Creator ID,Board Creator Name,Board Creator Username,Board Last Updated,Member ID,Member Name,Member Username,Role\n";
         
         boardsData.forEach(row => {
-            csvContent += `"${row.boardId}","${row.boardName}","${row.boardUrl}","${row.boardCreatorId}","${row.boardCreatorName}","${row.boardLastUpdated}","${row.memberId}","${row.memberName}","${row.memberUsername}","${row.role}"\n`;
+            csvContent += `"${row.boardId}","${row.boardName}","${row.boardUrl}","${row.boardCreatorId}","${row.boardCreatorName}","${row.boardCreatorUsername}","${row.boardLastUpdated}","${row.memberId}","${row.memberName}","${row.memberUsername}","${row.role}"\n`;
         });
         
         // Create download button

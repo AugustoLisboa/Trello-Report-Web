@@ -195,85 +195,27 @@ async function generateReport() {
             cleanCSV += `"${row.boardId}","${row.boardName}","${row.boardUrl}","${row.boardLastUpdated}","${row.boardCreator}","${row.boardMemberCount}","${row.members}"\n`;
         });
         
-        // Create detailed download button
-        const downloadBtn = document.getElementById('downloadBtn');
-        downloadBtn.onclick = function() {
-            const blob = new Blob([detailedCSV], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.setAttribute('href', url);
-            
-            // Filename includes workspace name and board count
-            const filename = `trello_${workspaceName.replace(/\s+/g, '_')}_${boards.length}_boards_detailed.csv`;
-            link.setAttribute('download', filename);
-            
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        };
-        
-        // Create clean download button
-        const cleanDownloadBtn = document.getElementById('cleanDownloadBtn');
-        cleanDownloadBtn.onclick = function() {
-            const blob = new Blob([cleanCSV], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.setAttribute('href', url);
-            
-            // Filename includes workspace name and board count
-            const filename = `trello_${workspaceName.replace(/\s+/g, '_')}_${boards.length}_boards_clean.csv`;
-            link.setAttribute('download', filename);
-            
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        };
-        
-        // Show report status
+        // Show report status with download buttons
         document.getElementById('reportStatus').innerHTML = `
             <strong>Report Summary:</strong><br>
             - Workspace: ${workspaceName}<br>
             - Boards Processed: ${boards.length}<br>
-            - Total Members: ${boardsData.length}<br>
+            - Total Board Memberships: ${boardsData.length}<br>
             <div class="export-options">
                 <p>Export Options:</p>
-                <button id="downloadBtn">Download Detailed CSV</button>
-                <button id="cleanDownloadBtn" style="background-color:#28a745;color:white">Download Clean CSV</button>
+                <button id="downloadDetailedBtn">Download Detailed CSV</button>
+                <button id="downloadCleanBtn" style="background-color:#28a745;color:white">Download Clean CSV</button>
             </div>
         `;
 
-        // Agora os botões existem no DOM, podemos atribuir os eventos
-        document.getElementById('downloadBtn').onclick = function() {
-            const blob = new Blob([detailedCSV], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.setAttribute('href', url);
-            
-            const filename = `trello_${workspaceName.replace(/\s+/g, '_')}_${boards.length}_boards_detailed.csv`;
-            link.setAttribute('download', filename);
-            
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        };
+        // Add event listeners to the newly created buttons
+        document.getElementById('downloadDetailedBtn').addEventListener('click', function() {
+            downloadCSV(detailedCSV, 'detailed');
+        });
         
-        document.getElementById('cleanDownloadBtn').onclick = function() {
-            const blob = new Blob([cleanCSV], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.setAttribute('href', url);
-            
-            const filename = `trello_${workspaceName.replace(/\s+/g, '_')}_${boards.length}_boards_clean.csv`;
-            link.setAttribute('download', filename);
-            
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        };
+        document.getElementById('downloadCleanBtn').addEventListener('click', function() {
+            downloadCSV(cleanCSV, 'clean');
+        });
         
         hideLoading();
         showStep(4);
@@ -282,4 +224,20 @@ async function generateReport() {
         console.error('Error generating report:', error);
         alert(`Error generating report: ${error.message}. Please try again.`);
     }
+}
+
+// Helper function to download CSV
+function downloadCSV(csvData, type) {
+    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    
+    const filename = `trello_${workspaceName.replace(/\s+/g, '_')}_${groupedBoardsData.length}_boards_${type}.csv`;
+    link.setAttribute('download', filename);
+    
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }

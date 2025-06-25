@@ -1,207 +1,72 @@
-// Global variables to store data between steps
-let workspaceId = '';
-let workspaceName = '';
-let boardsData = [];
-
-// Show loading spinner
-function showLoading() {
-    document.getElementById('loading').style.display = 'block';
-}
-
-// Hide loading spinner
-function hideLoading() {
-    document.getElementById('loading').style.display = 'none';
-}
-
-// Show a specific step and hide others
-function showStep(stepNumber) {
-    for (let i = 1; i <= 4; i++) {
-        const element = document.getElementById(`step${i}`);
-        if (i === stepNumber) {
-            element.style.display = 'block';
-        } else {
-            element.style.display = 'none';
-        }
-    }
-}
-
-// Go back to a previous step
-function backToStep(stepNumber) {
-    showStep(stepNumber);
-}
-
-// Validate API credentials by making a simple request
-async function validateCredentials() {
-    const apiKey = document.getElementById('apiKey').value.trim();
-    const apiToken = document.getElementById('apiToken').value.trim();
-    
-    if (!apiKey || !apiToken) {
-        alert('Please enter both API Key and Token');
-        return;
-    }
-    
-    showLoading();
-    
-    try {
-        // Make a simple request to validate credentials
-        const response = await fetch(`https://api.trello.com/1/members/me?key=${apiKey}&token=${apiToken}`);
-        if (!response.ok) {
-            throw new Error('Invalid credentials');
-        }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trello Workspace Report Generator</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="script.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Trello Workspace Report Generator</h1>
+        <p>Generate a CSV report with all boards in your Trello workspace, including users and their roles.</p>
         
-        hideLoading();
-        showStep(2);
-    } catch (error) {
-        hideLoading();
-        console.error('Error validating credentials:', error);
-        alert('Error validating credentials. Please check your API key and token and try again.');
-    }
-}
-
-// Extract workspace ID from URL
-function extractWorkspaceId() {
-    const workspaceUrl = document.getElementById('workspaceUrl').value.trim();
-    
-    if (!workspaceUrl) {
-        alert('Please enter a workspace URL');
-        return;
-    }
-    
-    // Try to extract workspace ID from URL
-    const urlPattern = /https?:\/\/trello\.com\/w\/([^\/]+)/i;
-    const match = workspaceUrl.match(urlPattern);
-    
-    if (!match || !match[1]) {
-        alert('Invalid Trello workspace URL. Please enter a URL like: https://trello.com/w/yourworkspace');
-        return;
-    }
-    
-    workspaceId = match[1];
-    workspaceName = match[1].replace(/-/g, ' ');
-    document.getElementById('workspaceName').textContent = workspaceName;
-    showStep(3);
-}
-
-// Generate the report for the selected workspace
-async function generateReport() {
-    const apiKey = document.getElementById('apiKey').value.trim();
-    const apiToken = document.getElementById('apiToken').value.trim();
-    
-    if (!workspaceId) {
-        alert('Workspace ID not found');
-        return;
-    }
-    
-    showLoading();
-    
-    try {
-        // First get the workspace details to verify it exists
-        const workspaceResponse = await fetch(`https://api.trello.com/1/organizations/${workspaceId}?key=${apiKey}&token=${apiToken}`);
-        if (!workspaceResponse.ok) {
-            throw new Error('Workspace not found or inaccessible');
-        }
-        
-        const workspaceData = await workspaceResponse.json();
-        workspaceName = workspaceData.displayName;
-        document.getElementById('workspaceName').textContent = workspaceName;
-        
-        // Get all boards in the workspace
-        const boardsResponse = await fetch(`https://api.trello.com/1/organizations/${workspaceId}/boards?key=${apiKey}&token=${apiToken}`);
-        const boards = await boardsResponse.json();
-        
-        // Prepare array to store all board data
-        boardsData = [];
-        const membersCache = {};
-        
-        // Function to fetch member details with caching
-        async function fetchMemberDetails(memberId) {
-            if (!membersCache[memberId]) {
-                const response = await fetch(`https://api.trello.com/1/members/${memberId}?fields=fullName,username&key=${apiKey}&token=${apiToken}`);
-                membersCache[memberId] = await response.json();
-            }
-            return membersCache[memberId];
-        }
-
-        // Process each board to get members and their roles
-        for (const board of boards) {
-            // Get board basic details including creator
-            const boardDetailResponse = await fetch(`https://api.trello.com/1/boards/${board.id}?fields=name,shortLink,dateLastActivity,idMemberCreator&key=${apiKey}&token=${apiToken}`);
-            const boardDetails = await boardDetailResponse.json();
+        <div class="step" id="step1">
+            <h2>Step 1: Get Your Trello API Key</h2>
+            <p>You need to get your Trello API key and token to access your workspace data.</p>
+            <ol>
+                <li>Go to <a href="https://trello.com/app-key" target="_blank">Trello App Key</a></li>
+                <li>Copy your API Key and paste it below</li>
+                <li>Scroll down to generate a token (with read access)</li>
+                <li>Copy the token and paste it below</li>
+            </ol>
             
-            // Get board creator name
-            let boardCreator = "Unknown";
-            if (boardDetails.idMemberCreator) {
-                const creatorDetails = await fetchMemberDetails(boardDetails.idMemberCreator);
-                boardCreator = creatorDetails.fullName || creatorDetails.username;
-            }
-
-            // Get board memberships with proper roles
-            const membershipsResponse = await fetch(`https://api.trello.com/1/boards/${board.id}/memberships?key=${apiKey}&token=${apiToken}`);
-            const memberships = await membershipsResponse.json();
+            <div class="input-group">
+                <label for="apiKey">API Key:</label>
+                <input type="text" id="apiKey" placeholder="Enter your Trello API Key">
+            </div>
             
-            // Filter active memberships and count
-            const activeMemberships = memberships.filter(m => !m.deactivated && !m.unconfirmed);
-            const boardMemberCount = activeMemberships.length;
+            <div class="input-group">
+                <label for="apiToken">API Token:</label>
+                <input type="text" id="apiToken" placeholder="Enter your Trello API Token">
+            </div>
             
-            // Get member details for each active membership
-            for (const membership of activeMemberships) {
-                // Get member details
-                const memberDetails = await fetchMemberDetails(membership.idMember);
-                
-                // Add to boardsData
-                boardsData.push({
-                    boardId: board.id,
-                    boardName: boardDetails.name,
-                    boardUrl: `https://trello.com/b/${boardDetails.shortLink}`,
-                    boardLastUpdated: boardDetails.dateLastActivity,
-                    boardCreator: boardCreator,
-                    boardMemberCount: boardMemberCount,
-                    memberId: membership.idMember,
-                    memberName: memberDetails.fullName,
-                    memberUsername: memberDetails.username,
-                    role: membership.memberType
-                });
-            }
-        }
+            <button onclick="validateCredentials()">Next: Enter Workspace</button>
+        </div>
         
-        // Prepare CSV content with new columns: Board Creator and Board Member Count
-        let csvContent = "Board ID,Board Name,Board URL,Board Last Updated,Board Creator,Board Member Count,Member ID,Member Name,Member Username,Role\n";
-        
-        boardsData.forEach(row => {
-            csvContent += `"${row.boardId}","${row.boardName}","${row.boardUrl}","${row.boardLastUpdated}","${row.boardCreator}","${row.boardMemberCount}","${row.memberId}","${row.memberName}","${row.memberUsername}","${row.role}"\n`;
-        });
-        
-        // Create download button with new filename format
-        const downloadBtn = document.getElementById('downloadBtn');
-        downloadBtn.onclick = function() {
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.setAttribute('href', url);
+        <div class="step" id="step2" style="display: none;">
+            <h2>Step 2: Enter Workspace URL</h2>
+            <p>Enter the URL of the workspace you want to generate a report for:</p>
             
-            // New filename includes workspace name and board count
-            const filename = `trello_${workspaceName.replace(/\s+/g, '_')}_${boards.length}_boards.csv`;
-            link.setAttribute('download', filename);
+            <div class="input-group">
+                <label for="workspaceUrl">Workspace URL:</label>
+                <input type="text" id="workspaceUrl" placeholder="https://trello.com/w/yourworkspace">
+                <p class="hint">Example: https://trello.com/w/yourworkspace</p>
+            </div>
             
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        };
+            <button onclick="extractWorkspaceId()">Next: Generate Report</button>
+            <button class="secondary" onclick="backToStep(1)">Back</button>
+        </div>
         
-        // Show report status
-        document.getElementById('reportStatus').innerHTML = `
-            <strong>Report Summary:</strong><br>
-            - Workspace: ${workspaceName}<br>
-            - Boards Processed: ${boards.length}<br>
-            - Total Members: ${boardsData.length}
-        `;
+        <div class="step" id="step3" style="display: none;">
+            <h2>Step 3: Generate Report</h2>
+            <p>Ready to generate report for workspace: <strong id="workspaceName"></strong></p>
+            <button onclick="generateReport()">Generate Report</button>
+            <button class="secondary" onclick="backToStep(2)">Back</button>
+        </div>
         
-        hideLoading();
-        showStep(4);
-    } catch (error) {
-        hideLoading();
-        console.error('Error generating report:', error);
-        alert(`Error generating report: ${error.message}. Please try again.`);
-    }
-}
+        <div class="step" id="step4" style="display: none;">
+            <h2>Step 4: Download Report</h2>
+            <p>Your report is ready! Choose your export format:</p>
+            <div id="reportStatus"></div>
+            <button class="secondary" onclick="backToStep(3)">Back</button>
+        </div>
+        
+        <div class="loading" id="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Loading data from Trello...</p>
+        </div>
+    </div>
+</body>
+</html>

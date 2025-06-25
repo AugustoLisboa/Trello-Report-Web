@@ -139,11 +139,12 @@ async function generateReport() {
             const membershipsResponse = await fetch(`https://api.trello.com/1/boards/${board.id}/memberships?key=${apiKey}&token=${apiToken}`);
             const memberships = await membershipsResponse.json();
             
-            // Get member details for each membership
-            for (const membership of memberships) {
-                // Skip deactivated or unconfirmed members if needed
-                if (membership.deactivated || membership.unconfirmed) continue;
-                
+            // Filter active memberships and count
+            const activeMemberships = memberships.filter(m => !m.deactivated && !m.unconfirmed);
+            const boardMemberCount = activeMemberships.length;
+            
+            // Get member details for each active membership
+            for (const membership of activeMemberships) {
                 // Get member details
                 const memberDetails = await fetchMemberDetails(membership.idMember);
                 
@@ -154,6 +155,7 @@ async function generateReport() {
                     boardUrl: `https://trello.com/b/${boardDetails.shortLink}`,
                     boardLastUpdated: boardDetails.dateLastActivity,
                     boardCreator: boardCreator,
+                    boardMemberCount: boardMemberCount,
                     memberId: membership.idMember,
                     memberName: memberDetails.fullName,
                     memberUsername: memberDetails.username,
@@ -162,11 +164,11 @@ async function generateReport() {
             }
         }
         
-        // Prepare CSV content with new Board Creator column
-        let csvContent = "Board ID,Board Name,Board URL,Board Last Updated,Board Creator,Member ID,Member Name,Member Username,Role\n";
+        // Prepare CSV content with new columns: Board Creator and Board Member Count
+        let csvContent = "Board ID,Board Name,Board URL,Board Last Updated,Board Creator,Board Member Count,Member ID,Member Name,Member Username,Role\n";
         
         boardsData.forEach(row => {
-            csvContent += `"${row.boardId}","${row.boardName}","${row.boardUrl}","${row.boardLastUpdated}","${row.boardCreator}","${row.memberId}","${row.memberName}","${row.memberUsername}","${row.role}"\n`;
+            csvContent += `"${row.boardId}","${row.boardName}","${row.boardUrl}","${row.boardLastUpdated}","${row.boardCreator}","${row.boardMemberCount}","${row.memberId}","${row.memberName}","${row.memberUsername}","${row.role}"\n`;
         });
         
         // Create download button with new filename format

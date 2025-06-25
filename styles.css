@@ -115,3 +115,28 @@ a:hover {
     margin-top: 5px;
     font-style: italic;
 }
+.export-options {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e1e4e8;
+}
+
+.export-options p {
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.export-options button {
+    margin-right: 10px;
+    margin-bottom: 10px;
+}
+
+.export-options button:last-child {
+    background-color: #28a745;
+}
+
+.export-options button:last-child:hover {
+    background-color: #218838;
+}

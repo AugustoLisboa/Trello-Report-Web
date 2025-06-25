@@ -8,7 +8,7 @@ This GitHub Pages site allows you to generate a CSV report from your Trello work
 
 ## How to Use
 
-1. Visit the [live site](https://your-username.github.io/trello-workspace-reporter)
+1. Visit the [live site]([https://your-username.github.io/trello-workspace-reporter](https://augustolisboa.github.io/Trello-Report-Web/))
 2. Get your Trello API key and token from [Trello App Key](https://trello.com/app-key)
 3. Enter your API credentials
 4. Select your workspace

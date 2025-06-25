@@ -240,9 +240,40 @@ async function generateReport() {
             <div class="export-options">
                 <p>Export Options:</p>
                 <button id="downloadBtn">Download Detailed CSV</button>
-                <button id="cleanDownloadBtn">Download Clean CSV</button>
+                <button id="cleanDownloadBtn" style="background-color:#28a745;color:white">Download Clean CSV</button>
             </div>
         `;
+
+        // Agora os botões existem no DOM, podemos atribuir os eventos
+        document.getElementById('downloadBtn').onclick = function() {
+            const blob = new Blob([detailedCSV], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            
+            const filename = `trello_${workspaceName.replace(/\s+/g, '_')}_${boards.length}_boards_detailed.csv`;
+            link.setAttribute('download', filename);
+            
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+        
+        document.getElementById('cleanDownloadBtn').onclick = function() {
+            const blob = new Blob([cleanCSV], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            
+            const filename = `trello_${workspaceName.replace(/\s+/g, '_')}_${boards.length}_boards_clean.csv`;
+            link.setAttribute('download', filename);
+            
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
         
         hideLoading();
         showStep(4);

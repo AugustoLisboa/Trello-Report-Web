@@ -111,13 +111,30 @@ async function generateReport() {
         
         // Prepare array to store all board data
         boardsData = [];
+        const membersCache = {};
         
+        // Function to fetch member details with caching
+        async function fetchMemberDetails(memberId) {
+            if (!membersCache[memberId]) {
+                const response = await fetch(`https://api.trello.com/1/members/${memberId}?fields=fullName,username&key=${apiKey}&token=${apiToken}`);
+                membersCache[memberId] = await response.json();
+            }
+            return membersCache[memberId];
+        }
+
         // Process each board to get members and their roles
         for (const board of boards) {
-            // Get board basic details
-            const boardDetailResponse = await fetch(`https://api.trello.com/1/boards/${board.id}?fields=name,shortLink,dateLastActivity&key=${apiKey}&token=${apiToken}`);
+            // Get board basic details including creator
+            const boardDetailResponse = await fetch(`https://api.trello.com/1/boards/${board.id}?fields=name,shortLink,dateLastActivity,idMemberCreator&key=${apiKey}&token=${apiToken}`);
             const boardDetails = await boardDetailResponse.json();
             
+            // Get board creator name
+            let boardCreator = "Unknown";
+            if (boardDetails.idMemberCreator) {
+                const creatorDetails = await fetchMemberDetails(boardDetails.idMemberCreator);
+                boardCreator = creatorDetails.fullName || creatorDetails.username;
+            }
+
             // Get board memberships with proper roles
             const membershipsResponse = await fetch(`https://api.trello.com/1/boards/${board.id}/memberships?key=${apiKey}&token=${apiToken}`);
             const memberships = await membershipsResponse.json();
@@ -128,8 +145,7 @@ async function generateReport() {
                 if (membership.deactivated || membership.unconfirmed) continue;
                 
                 // Get member details
-                const memberResponse = await fetch(`https://api.trello.com/1/members/${membership.idMember}?fields=fullName,username&key=${apiKey}&token=${apiToken}`);
-                const memberDetails = await memberResponse.json();
+                const memberDetails = await fetchMemberDetails(membership.idMember);
                 
                 // Add to boardsData
                 boardsData.push({
@@ -137,6 +153,7 @@ async function generateReport() {
                     boardName: boardDetails.name,
                     boardUrl: `https://trello.com/b/${boardDetails.shortLink}`,
                     boardLastUpdated: boardDetails.dateLastActivity,
+                    boardCreator: boardCreator,
                     memberId: membership.idMember,
                     memberName: memberDetails.fullName,
                     memberUsername: memberDetails.username,
@@ -145,21 +162,25 @@ async function generateReport() {
             }
         }
         
-        // Prepare CSV content
-        let csvContent = "Board ID,Board Name,Board URL,Board Last Updated,Member ID,Member Name,Member Username,Role\n";
+        // Prepare CSV content with new Board Creator column
+        let csvContent = "Board ID,Board Name,Board URL,Board Last Updated,Board Creator,Member ID,Member Name,Member Username,Role\n";
         
         boardsData.forEach(row => {
-            csvContent += `"${row.boardId}","${row.boardName}","${row.boardUrl}","${row.boardLastUpdated}","${row.memberId}","${row.memberName}","${row.memberUsername}","${row.role}"\n`;
+            csvContent += `"${row.boardId}","${row.boardName}","${row.boardUrl}","${row.boardLastUpdated}","${row.boardCreator}","${row.memberId}","${row.memberName}","${row.memberUsername}","${row.role}"\n`;
         });
         
-        // Create download button
+        // Create download button with new filename format
         const downloadBtn = document.getElementById('downloadBtn');
         downloadBtn.onclick = function() {
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.setAttribute('href', url);
-            link.setAttribute('download', `trello_workspace_report_${workspaceName.replace(/\s+/g, '_')}.csv`);
+            
+            // New filename includes workspace name and board count
+            const filename = `trello_${workspaceName.replace(/\s+/g, '_')}_${boards.length}_boards.csv`;
+            link.setAttribute('download', filename);
+            
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();

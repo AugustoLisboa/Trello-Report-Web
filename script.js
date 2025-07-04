@@ -126,8 +126,8 @@ async function generateReport() {
 
         // Process each board to get members and their roles
         for (const board of boards) {
-            // Get board basic details including creator
-            const boardDetailResponse = await fetch(`https://api.trello.com/1/boards/${board.id}?fields=name,shortLink,dateLastActivity,idMemberCreator&key=${apiKey}&token=${apiToken}`);
+            // Get board basic details including creator and closed status
+            const boardDetailResponse = await fetch(`https://api.trello.com/1/boards/${board.id}?fields=name,shortLink,dateLastActivity,idMemberCreator,closed&key=${apiKey}&token=${apiToken}`);
             const boardDetails = await boardDetailResponse.json();
             
             // Get board creator name
@@ -136,6 +136,9 @@ async function generateReport() {
                 const creatorDetails = await fetchMemberDetails(boardDetails.idMemberCreator);
                 boardCreator = creatorDetails.fullName || creatorDetails.username;
             }
+
+            // Determine board status
+            const boardStatus = boardDetails.closed ? "Closed" : "Open";
 
             // Get board memberships with proper roles
             const membershipsResponse = await fetch(`https://api.trello.com/1/boards/${board.id}/memberships?key=${apiKey}&token=${apiToken}`);
@@ -160,6 +163,7 @@ async function generateReport() {
                     boardUrl: `https://trello.com/b/${boardDetails.shortLink}`,
                     boardLastUpdated: boardDetails.dateLastActivity,
                     boardCreator: boardCreator,
+                    boardStatus: boardStatus,
                     boardMemberCount: boardMemberCount,
                     memberId: membership.idMember,
                     memberName: memberDetails.fullName,
@@ -178,21 +182,22 @@ async function generateReport() {
                 boardUrl: `https://trello.com/b/${boardDetails.shortLink}`,
                 boardLastUpdated: boardDetails.dateLastActivity,
                 boardCreator: boardCreator,
+                boardStatus: boardStatus,
                 boardMemberCount: boardMemberCount,
                 members: membersList.join(', ')
             });
         }
         
         // Prepare CSV content for detailed export
-        let detailedCSV = "Board ID,Board Name,Board URL,Board Last Updated,Board Creator,Board Member Count,Member ID,Member Name,Member Username,Role\n";
+        let detailedCSV = "Board ID,Board Name,Board URL,Board Last Updated,Board Creator,Board Status,Board Member Count,Member ID,Member Name,Member Username,Role\n";
         boardsData.forEach(row => {
-            detailedCSV += `"${row.boardId}","${row.boardName}","${row.boardUrl}","${row.boardLastUpdated}","${row.boardCreator}","${row.boardMemberCount}","${row.memberId}","${row.memberName}","${row.memberUsername}","${row.role}"\n`;
+            detailedCSV += `"${row.boardId}","${row.boardName}","${row.boardUrl}","${row.boardLastUpdated}","${row.boardCreator}","${row.boardStatus}","${row.boardMemberCount}","${row.memberId}","${row.memberName}","${row.memberUsername}","${row.role}"\n`;
         });
         
         // Prepare CSV content for clean export
-        let cleanCSV = "Board ID,Board Name,Board URL,Board Last Updated,Board Creator,Board Member Count,Members\n";
+        let cleanCSV = "Board ID,Board Name,Board URL,Board Last Updated,Board Creator,Board Status,Board Member Count,Members\n";
         groupedBoardsData.forEach(row => {
-            cleanCSV += `"${row.boardId}","${row.boardName}","${row.boardUrl}","${row.boardLastUpdated}","${row.boardCreator}","${row.boardMemberCount}","${row.members}"\n`;
+            cleanCSV += `"${row.boardId}","${row.boardName}","${row.boardUrl}","${row.boardLastUpdated}","${row.boardCreator}","${row.boardStatus}","${row.boardMemberCount}","${row.members}"\n`;
         });
         
         // Show report status with download buttons
